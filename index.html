@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1c2733">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>یادداشت‌های من</title>
+<style>
+  :root {
+    --bg: #edf0f3;
+    --surface: #ffffff;
+    --ink: #1c2733;
+    --muted: #5d6b79;
+    --line: #d5dbe1;
+    --image: #0e7c7b;
+    --audio: #3b4ba8;
+    --text: #9a6700;
+    --excel: #1f7a3d;
+    --danger: #b3342b;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Vazirmatn, Tahoma, "Segoe UI", system-ui, sans-serif;
+    line-height: 1.7;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 16px 14px 60px; }
+  h1 { font-size: 1.3rem; margin: 6px 0 14px; }
+
+  .add { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .add label, .add button, .chip, .go {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 52px; border-radius: var(--radius);
+    font: inherit; font-weight: 600; cursor: pointer; border: 0;
+    color: #fff; text-align: center; padding: 0 10px;
+  }
+  .add .img { background: var(--image); }
+  .add .aud { background: var(--audio); }
+  .add .xls { background: var(--excel); }
+  .add .txt { background: var(--text); }
+  .add .rec { background: var(--ink); grid-column: 1 / -1; }
+  .add .rec.live { background: var(--danger); }
+  .add input { display: none; }
+  #status { min-height: 1.6em; color: var(--muted); font-size: .9rem; margin: 8px 2px 0; }
+  #bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 4px 0 0; display: none; }
+  #bar i { display: block; height: 100%; width: 0; background: var(--ink); }
+
+  .filters {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 12px; margin: 14px 0;
+    display: grid; gap: 10px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .filters label { display: grid; gap: 2px; font-size: .85rem; color: var(--muted); }
+  input[type=date], input[type=search], select {
+    font: inherit; padding: 9px 10px; border: 1px solid var(--line);
+    border-radius: 8px; background: #fff; color: var(--ink); width: 100%;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    min-height: 36px; background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); font-weight: 500; font-size: .9rem;
+  }
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .go { background: var(--ink); width: 100%; }
+  .count { color: var(--muted); font-size: .9rem; margin: 4px 2px 10px; display: flex; justify-content: space-between; align-items: center; }
+  .count button { background: none; border: 0; font: inherit; color: var(--ink); text-decoration: underline; cursor: pointer; }
+
+  .note {
+    background: var(--surface); border: 1px solid var(--line);
+    border-inline-start: 5px solid var(--line);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px;
+  }
+  .note.image { border-inline-start-color: var(--image); }
+  .note.audio { border-inline-start-color: var(--audio); }
+  .note.text { border-inline-start-color: var(--text); }
+  .note.excel { border-inline-start-color: var(--excel); }
+  .sheet {
+    white-space: pre; overflow-x: auto; margin: 8px 0; padding: 8px 10px;
+    background: var(--bg); border-radius: 8px; font-size: .85rem; line-height: 1.5;
+    font-family: ui-monospace, Menlo, Consolas, Tahoma, monospace;
+  }
+  .compose {
+    display: none; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 12px; margin-top: 10px;
+  }
+  .compose.open { display: grid; gap: 10px; }
+  .compose textarea {
+    font: inherit; width: 100%; min-height: 140px; padding: 10px;
+    border: 1px solid var(--line); border-radius: 8px; resize: vertical; color: var(--ink);
+  }
+  .compose .btns { display: flex; gap: 10px; }
+  .compose .btns button {
+    flex: 1; min-height: 44px; border-radius: var(--radius); border: 0;
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .compose .save { background: var(--ink); color: #fff; }
+  .compose .cancel { background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+  .meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: .85rem; }
+  .text { white-space: pre-wrap; margin: 8px 0; word-break: break-word; }
+  .text.wait { color: var(--muted); }
+  .text.err { color: var(--danger); }
+  .thumb { max-width: 100%; max-height: 220px; border-radius: 8px; margin-top: 8px; display: block; }
+  audio { width: 100%; margin-top: 8px; }
+  .acts { display: flex; gap: 14px; flex-wrap: wrap; }
+  .acts button { background: none; border: 0; font: inherit; color: var(--muted); cursor: pointer; padding: 4px 0; }
+  .acts button:hover { color: var(--ink); }
+  .acts .del:hover { color: var(--danger); }
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+  details { margin-top: 18px; color: var(--muted); font-size: .9rem; }
+  details label { display: grid; gap: 2px; margin-top: 8px; }
+  :focus-visible { outline: 3px solid #f0b429; outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { .rec.live { animation: pulse 1.4s ease-in-out infinite; } }
+  @keyframes pulse { 50% { opacity: .65; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>یادداشت‌های من</h1>
+
+  <section class="add" aria-label="افزودن">
+    <label class="img" tabindex="0">
+      افزودن عکس
+      <input id="imgIn" type="file" accept="image/*" multiple>
+    </label>
+    <label class="aud" tabindex="0">
+      افزودن فایل صوتی
+      <input id="audIn" type="file" accept="audio/*" multiple>
+    </label>
+    <label class="xls" tabindex="0">
+      افزودن اکسل
+      <input id="xlsIn" type="file" multiple
+             accept=".xlsx,.xls,.xlsm,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv">
+    </label>
+    <button class="txt" id="txtBtn" type="button">یادداشت متنی</button>
+    <button class="rec" id="recBtn" type="button">ضبط صدا</button>
+  </section>
+
+  <section class="compose" id="compose" aria-label="یادداشت متنی">
+    <textarea id="txtArea" dir="auto" placeholder="متن خود را بنویسید…"></textarea>
+    <div class="btns">
+      <button type="button" class="save" id="txtSave">ذخیره</button>
+      <button type="button" class="cancel" id="txtCancel">انصراف</button>
+    </div>
+  </section>
+
+  <div id="status" role="status" aria-live="polite"></div>
+  <div id="bar"><i></i></div>
+
+  <section class="filters" aria-label="فیلتر">
+    <div class="chips" id="chips">
+      <button type="button" class="chip" data-days="0">امروز</button>
+      <button type="button" class="chip" data-days="7">۷ روز اخیر</button>
+      <button type="button" class="chip" data-days="30">۳۰ روز اخیر</button>
+      <button type="button" class="chip on" data-days="all">همه</button>
+    </div>
+    <div class="row">
+      <label>از تاریخ <input type="date" id="from"></label>
+      <label>تا تاریخ <input type="date" id="to"></label>
+    </div>
+    <div class="row">
+      <label>جستجو در متن <input type="search" id="q" placeholder="کلمه یا عبارت"></label>
+      <label>نوع
+        <select id="kind">
+          <option value="">همه</option>
+          <option value="image">عکس</option>
+          <option value="audio">صوت</option>
+          <option value="excel">اکسل</option>
+          <option value="text">متن تایپ‌شده</option>
+        </select>
+      </label>
+    </div>
+    <button type="button" class="go" id="apply">نمایش نتایج</button>
+  </section>
+
+  <div class="count"><span id="count"></span><button type="button" id="export" hidden>ذخیره متن‌های این بازه</button></div>
+  <section id="list"></section>
+
+  <details>
+    <summary>تنظیمات</summary>
+    <label>دقت تبدیل صوت (مدل Whisper)
+      <select id="model">
+        <option value="Xenova/whisper-base">سریع‌تر، دقت کمتر (حدود ۸۰ مگابایت)</option>
+        <option value="Xenova/whisper-small">کندتر، دقت بهتر (حدود ۲۵۰ مگابایت)</option>
+      </select>
+    </label>
+    <label>زبان صدا
+      <select id="lang">
+        <option value="persian">فارسی</option>
+        <option value="english">انگلیسی</option>
+        <option value="">تشخیص خودکار</option>
+      </select>
+    </label>
+  </details>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const z = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+const faNum = n => Number(n).toLocaleString('fa-IR');
+
+/* ---------- status / progress ---------- */
+function setStatus(t) { $('#status').textContent = t; }
+function setBar(frac) {
+  const bar = $('#bar');
+  if (frac == null) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  bar.firstElementChild.style.width = Math.round(frac * 100) + '%';
+}
+
+/* ---------- storage (IndexedDB) ---------- */
+const dbReady = new Promise((res, rej) => {
+  const r = indexedDB.open('media-notes', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('notes', { keyPath: 'id' });
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+});
+async function store(mode, fn) {
+  const db = await dbReady;
+  return new Promise((res, rej) => {
+    const t = db.transaction('notes', mode);
+    const req = fn(t.objectStore('notes'));
+    t.oncomplete = () => res(req && req.result);
+    t.onerror = () => rej(t.error);
+  });
+}
+const dbAll = () => store('readonly', s => s.getAll());
+const dbPut = n => store('readwrite', s => s.put(n));
+const dbDel = id => store('readwrite', s => s.delete(id));
+const dbGet = id => store('readonly', s => s.get(id));
+
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+
+/* ---------- settings ---------- */
+for (const k of ['model', 'lang']) {
+  const el = $('#' + k), saved = localStorage.getItem('set-' + k);
+  if (saved !== null) el.value = saved;
+  el.addEventListener('change', () => localStorage.setItem('set-' + k, el.value));
+}
+
+/* ---------- OCR (Tesseract.js, loaded on first use) ---------- */
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error('بارگذاری کتابخانه ممکن نشد. اتصال اینترنت را بررسی کنید.'));
+    document.head.append(s);
+  });
+}
+let ocrWorker = null;
+async function runOcr(blob) {
+  if (!window.Tesseract) await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+  if (!ocrWorker) {
+    ocrWorker = await Tesseract.createWorker(['fas', 'eng'], 1, {
+      logger: m => {
+        if (m.status && typeof m.progress === 'number') {
+          setStatus(m.status.includes('loading') ? 'در حال آماده‌سازی تشخیص متن…' : 'در حال خواندن متن عکس…');
+          setBar(m.progress);
+        }
+      },
+    });
+  }
+  const { data } = await ocrWorker.recognize(blob);
+  return data.text.trim();
+}
+
+// Shrink big camera photos: faster OCR and much less storage.
+async function shrinkImage(file, max = 2000) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+  } catch { return file; }
+}
+
+/* ---------- Excel / CSV import (SheetJS, loaded on first use) ---------- */
+const KIND_LABEL = { image: 'عکس', audio: 'صوت', excel: 'اکسل', text: 'متن' };
+
+async function runExcel(note) {
+  setStatus('در حال خواندن فایل اکسل…');
+  if (!window.XLSX) await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+  const isCsv = /\.csv$/i.test(note.name || '');
+  const wb = isCsv
+    ? XLSX.read(await note.blob.text(), { type: 'string' })
+    : XLSX.read(await note.blob.arrayBuffer(), { type: 'array', cellDates: true });
+  let rows = 0;
+  const parts = wb.SheetNames.map(name => {
+    const tsv = XLSX.utils.sheet_to_csv(wb.Sheets[name], { FS: '\t', blankrows: false }).trim();
+    rows += tsv ? tsv.split('\n').length : 0;
+    return `# ${name}\n${tsv}`;
+  });
+  note.meta = { sheets: wb.SheetNames.length, rows };
+  return parts.join('\n\n');
+}
+
+/* ---------- speech to text (Whisper in a worker) ---------- */
+let stt = null, sttId = 0;
+const sttWaiters = new Map();
+function getWorker() {
+  if (stt) return stt;
+  stt = new Worker('worker.js', { type: 'module' });
+  stt.onmessage = e => {
+    const { id, type } = e.data, w = sttWaiters.get(id);
+    if (!w) return;
+    if (type === 'progress') {
+      const p = e.data.p;
+      if (p.status === 'progress' && typeof p.progress === 'number') {
+        setStatus('در حال دانلود مدل تبدیل صدا (فقط بار اول)…');
+        setBar(p.progress / 100);
+      }
+    } else if (type === 'done') { sttWaiters.delete(id); w.res(e.data.text); }
+    else if (type === 'error') { sttWaiters.delete(id); w.rej(new Error(e.data.message)); }
+  };
+  stt.onerror = () => { for (const w of sttWaiters.values()) w.rej(new Error('اجرای مدل صدا روی این دستگاه ممکن نشد.')); sttWaiters.clear(); stt = null; };
+  return stt;
+}
+async function decodeAudio(blob) {
+  const buf = await blob.arrayBuffer();
+  const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  try {
+    const ab = await ctx.decodeAudioData(buf);
+    return new Float32Array(ab.getChannelData(0));
+  } finally { ctx.close(); }
+}
+async function runStt(blob) {
+  setStatus('در حال آماده‌سازی صدا…');
+  const audio = await decodeAudio(blob);
+  const id = ++sttId;
+  const w = getWorker();
+  const p = new Promise((res, rej) => sttWaiters.set(id, { res, rej }));
+  w.postMessage({ id, model: $('#model').value, lang: $('#lang').value, audio }, [audio.buffer]);
+  setStatus('در حال تبدیل صدا به متن… (ممکن است چند دقیقه طول بکشد)');
+  setBar(null);
+  return p;
+}
+
+/* ---------- processing queue ---------- */
+let running = false;
+async function kick() {
+  if (running) return;
+  running = true;
+  try {
+    for (;;) {
+      const next = (await dbAll()).filter(n => n.status === 'pending').sort((a, b) => a.created - b.created)[0];
+      if (!next) break;
+      try {
+        next.text = next.kind === 'image' ? await runOcr(next.blob)
+                  : next.kind === 'excel' ? await runExcel(next)
+                  : await runStt(next.blob);
+        next.status = 'done'; next.error = '';
+      } catch (e) { next.status = 'error'; next.error = String(e.message || e); }
+      await dbPut(next);
+      setBar(null);
+      render();
+    }
+  } finally {
+    running = false;
+    setStatus(''); setBar(null);
+  }
+}
+
+/* ---------- adding items ---------- */
+async function addFiles(files, forcedKind) {
+  for (const f of files) {
+    const kind = forcedKind || (f.type.startsWith('image/') ? 'image' : 'audio');
+    const blob = kind === 'image' ? await shrinkImage(f) : f;
+    await dbPut({
+      id: crypto.randomUUID(), kind, name: f.name || '', created: Date.now(),
+      blob, text: '', status: 'pending', error: '',
+    });
+  }
+  await render();
+  kick();
+}
+$('#imgIn').addEventListener('change', e => { addFiles([...e.target.files], 'image'); e.target.value = ''; });
+$('#audIn').addEventListener('change', e => { addFiles([...e.target.files], 'audio'); e.target.value = ''; });
+$('#xlsIn').addEventListener('change', e => { addFiles([...e.target.files], 'excel'); e.target.value = ''; });
+
+/* ---------- typed notes ---------- */
+let editingId = null;
+function openCompose(text = '', id = null) {
+  editingId = id;
+  $('#txtArea').value = text;
+  $('#compose').classList.add('open');
+  $('#txtArea').focus();
+}
+function closeCompose() {
+  editingId = null;
+  $('#txtArea').value = '';
+  $('#compose').classList.remove('open');
+}
+$('#txtBtn').addEventListener('click', () => openCompose());
+$('#txtCancel').addEventListener('click', closeCompose);
+$('#txtSave').addEventListener('click', async () => {
+  const text = $('#txtArea').value.trim();
+  if (!text) { setStatus('متنی نوشته نشده است.'); return; }
+  if (editingId) {
+    const n = await dbGet(editingId);
+    if (n) { n.text = text; n.edited = Date.now(); await dbPut(n); }
+  } else {
+    await dbPut({ id: crypto.randomUUID(), kind: 'text', name: '', created: Date.now(), blob: null, text, status: 'done', error: '' });
+  }
+  setStatus('');
+  closeCompose();
+  render();
+});
+document.querySelectorAll('.add label').forEach(l =>
+  l.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); l.querySelector('input').click(); } }));
+
+/* ---------- recording ---------- */
+const recBtn = $('#recBtn');
+let rec = null, chunks = [];
+if (!(navigator.mediaDevices && window.MediaRecorder)) recBtn.hidden = true;
+recBtn.addEventListener('click', async () => {
+  if (rec) { rec.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    rec = new MediaRecorder(stream);
+    chunks = [];
+    rec.ondataavailable = e => chunks.push(e.data);
+    rec.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const type = rec.mimeType || 'audio/webm';
+      const blob = new Blob(chunks, { type });
+      rec = null;
+      recBtn.textContent = 'ضبط صدا';
+      recBtn.classList.remove('live');
+      addFiles([new File([blob], `ضبط-${Date.now()}`, { type })], 'audio');
+    };
+    rec.start();
+    recBtn.textContent = 'توقف و ذخیره';
+    recBtn.classList.add('live');
+  } catch { setStatus('دسترسی به میکروفون داده نشد. در تنظیمات مرورگر اجازه دهید.'); }
+});
+
+/* ---------- filters ---------- */
+function setRange(days) {
+  if (days === 'all') { $('#from').value = ''; $('#to').value = ''; return; }
+  const to = new Date(), from = new Date();
+  from.setDate(to.getDate() - Number(days));
+  $('#from').value = ymd(from);
+  $('#to').value = ymd(to);
+}
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c === b));
+  setRange(b.dataset.days);
+  render();
+});
+['from', 'to'].forEach(id => $('#' + id).addEventListener('change', () => {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  render();
+}));
+$('#apply').addEventListener('click', render);
+$('#q').addEventListener('input', render);
+$('#kind').addEventListener('change', render);
+
+function filtered(all) {
+  const from = $('#from').value ? new Date($('#from').value + 'T00:00:00').getTime() : -Infinity;
+  const to = $('#to').value ? new Date($('#to').value + 'T23:59:59.999').getTime() : Infinity;
+  const q = $('#q').value.trim().toLowerCase();
+  const kind = $('#kind').value;
+  return all
+    .filter(n => n.created >= from && n.created <= to)
+    .filter(n => !kind || n.kind === kind)
+    .filter(n => !q || (n.text || '').toLowerCase().includes(q))
+    .sort((a, b) => b.created - a.created);
+}
+
+/* ---------- rendering ---------- */
+const fmt = ms => new Date(ms).toLocaleString('fa-IR', { dateStyle: 'medium', timeStyle: 'short' });
+let urls = [];
+let current = [];
+
+function card(n) {
+  const el = document.createElement('article');
+  el.className = 'note ' + n.kind;
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const a = document.createElement('span');
+  a.textContent = KIND_LABEL[n.kind] + (n.kind === 'excel' && n.meta ? ` · ${faNum(n.meta.sheets)} برگه، ${faNum(n.meta.rows)} ردیف` : '');
+  const b = document.createElement('span'); b.textContent = fmt(n.created);
+  meta.append(a, b);
+
+  const text = document.createElement('div');
+  text.className = 'text';
+  if (n.status === 'pending') { text.classList.add('wait'); text.textContent = 'در صف تبدیل به متن…'; }
+  else if (n.status === 'error') { text.classList.add('err'); text.textContent = 'تبدیل انجام نشد: ' + (n.error || ''); }
+  else text.textContent = n.text || '(متنی پیدا نشد)';
+  text.dir = 'auto';
+
+  // Excel: show a short preview of the sheet text, with a toggle for the rest.
+  let toggle = null;
+  if (n.kind === 'excel' && n.status === 'done') {
+    const lines = (n.text || '').split('\n');
+    const LIMIT = 12;
+    const pre = document.createElement('pre');
+    pre.className = 'sheet'; pre.dir = 'auto';
+    let open = false;
+    const paint = () => { pre.textContent = (open ? lines : lines.slice(0, LIMIT)).join('\n'); };
+    paint();
+    if (lines.length > LIMIT) {
+      toggle = document.createElement('button');
+      toggle.type = 'button';
+      const label = () => open ? 'نمایش کمتر' : `نمایش همه (${faNum(lines.length)} خط)`;
+      toggle.textContent = label();
+      toggle.onclick = () => { open = !open; paint(); toggle.textContent = label(); };
+    }
+    if (n.name) { const nm = document.createElement('div'); nm.className = 'meta'; nm.textContent = n.name; el.append(meta, nm, pre); }
+    else el.append(meta, pre);
+  } else {
+    el.append(meta, text);
+  }
+
+  if (n.blob && n.kind === 'image') {
+    const url = URL.createObjectURL(n.blob); urls.push(url);
+    const img = document.createElement('img');
+    img.className = 'thumb'; img.alt = n.name || 'تصویر'; img.src = url;
+    el.append(img);
+  } else if (n.blob && n.kind === 'audio') {
+    const url = URL.createObjectURL(n.blob); urls.push(url);
+    const au = document.createElement('audio');
+    au.controls = true; au.preload = 'none'; au.src = url;
+    el.append(au);
+  }
+
+  const acts = document.createElement('div');
+  acts.className = 'acts';
+  if (toggle) acts.append(toggle);
+  if (n.kind === 'text') {
+    const edit = document.createElement('button');
+    edit.type = 'button'; edit.textContent = 'ویرایش';
+    edit.onclick = () => { openCompose(n.text, n.id); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    acts.append(edit);
+  }
+  if (n.kind === 'excel' && n.blob) {
+    const dl = document.createElement('button');
+    dl.type = 'button'; dl.textContent = 'ذخیره فایل اصلی';
+    dl.onclick = () => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(n.blob); a.download = n.name || 'sheet.xlsx'; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    };
+    acts.append(dl);
+  }
+  if (n.status === 'done') {
+    const copy = document.createElement('button');
+    copy.type = 'button'; copy.textContent = 'کپی متن';
+    copy.onclick = async () => { await navigator.clipboard.writeText(n.text || ''); copy.textContent = 'کپی شد'; setTimeout(() => copy.textContent = 'کپی متن', 1500); };
+    acts.append(copy);
+  }
+  if (n.status === 'error') {
+    const retry = document.createElement('button');
+    retry.type = 'button'; retry.textContent = 'تلاش دوباره';
+    retry.onclick = async () => { const cur = await dbGet(n.id); cur.status = 'pending'; cur.error = ''; await dbPut(cur); await render(); kick(); };
+    acts.append(retry);
+  }
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'del'; del.textContent = 'حذف';
+  del.onclick = async () => { if (!confirm('این مورد برای همیشه حذف شود؟')) return; await dbDel(n.id); render(); };
+  acts.append(del);
+  el.append(acts);
+  return el;
+}
+
+async function render() {
+  urls.forEach(u => URL.revokeObjectURL(u));
+  urls = [];
+  current = filtered(await dbAll());
+  const list = $('#list');
+  list.replaceChildren();
+  $('#count').textContent = current.length ? `${faNum(current.length)} مورد` : '';
+  $('#export').hidden = !current.some(n => n.status === 'done' && n.text);
+  if (!current.length) {
+    const d = document.createElement('div');
+    d.className = 'empty';
+    d.textContent = 'در این بازه موردی نیست. عکس یا صدا اضافه کنید یا بازه را تغییر دهید.';
+    list.append(d);
+  } else current.forEach(n => list.append(card(n)));
+}
+
+/* ---------- export text of the current range ---------- */
+$('#export').addEventListener('click', () => {
+  const body = [...current].reverse()
+    .filter(n => n.status === 'done' && n.text)
+    .map(n => `[${fmt(n.created)} - ${KIND_LABEL[n.kind]}${n.name && n.kind === 'excel' ? ': ' + n.name : ''}]\n${n.text}`)
+    .join('\n\n----------\n\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\ufeff' + body], { type: 'text/plain;charset=utf-8' }));
+  a.download = `یادداشت-${ymd(new Date())}.txt`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+});
+
+/* ---------- start ---------- */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+render().then(kick);
+</script>
+</body>
+</html>
